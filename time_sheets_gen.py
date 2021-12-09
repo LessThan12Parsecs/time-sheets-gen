@@ -95,13 +95,13 @@ else:
 
 
 for month in months_list:
-    month_str = month.split("/")[0].encode('ascii','ignore')
-    year_str = month.split("/")[1].encode('ascii','ignore')
+    month_str = month.split("/")[0]
+    year_str = month.split("/")[1]
     month_number = list(calendar.month_name).index(month_str)
     year = int(year_str)
     n_days = calendar.monthrange(int(year_str), month_number)[1]
 
-    print "Generating " + month_str + " " + year_str + " sheet..."
+    print ("Generating " + month_str + " " + year_str + " sheet...")
 
     sheet = template_str
 
