@@ -4,10 +4,10 @@ import pandas as pd
 import locale
 import calendar
 import os
+from PIL import Image
 
 
 BASE_HOUR = 9           # 7 to 9
-
 
 # names of months in spanish
 locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
@@ -95,13 +95,16 @@ else:
 
 
 for month in months_list:
-    month_str = month.split("/")[0].encode('ascii','ignore')
-    year_str = month.split("/")[1].encode('ascii','ignore')
+    
+    day_to_sign = []
+
+    month_str = month.split("/")[0]
+    year_str = month.split("/")[1]
     month_number = list(calendar.month_name).index(month_str)
     year = int(year_str)
     n_days = calendar.monthrange(int(year_str), month_number)[1]
 
-    print "Generating " + month_str + " " + year_str + " sheet..."
+    print ("Generating ", month_str, year_str, "sheet...")
 
     sheet = template_str
 
@@ -147,19 +150,52 @@ for month in months_list:
             sheet = sheet.replace("C"+str(i+1).zfill(2), daily_hours_str)
             htotal += daily_hours
 
+            day_to_sign.append(i)
+
     for i in range(n_days, 31): # non existent days
         marker = sheet.find("A:"+str(i+1).zfill(2))
         sheet = sheet.replace(sheet[marker: marker+59], " "*59)
     
     sheet = sheet.replace("#HTOTAL#", str(htotal))
 
-
     filename = "output/" + month_str.upper() + "_" + year_str
     new_file = open(filename + ".svg", "w")
     new_file.write(sheet)
     new_file.close()
-    os.system("inkscape " + filename + ".svg --export-pdf=" + filename + ".pdf")
+    os.system("inkscape " + filename + ".svg --export-filename=" + filename + ".png")
     os.system("rm " + filename + ".svg")
 
-exit()
+    # open it again as a image to paste the signature
+    template_img = Image.open(filename + ".png")
+    signature_img = Image.open('sign.png')
 
+    # reduce the signature size to fit into the box
+    size = 30,80
+    signature_img.thumbnail(size, Image.ANTIALIAS)
+
+    # append an extra day to sign the total number of hours
+    day_to_sign.append(31)
+    for i in day_to_sign:
+
+        # define x, y coords to paste the signature
+        x = 600
+        y = 152+i*24
+
+        template_img.paste(signature_img, (x,y))
+
+    # add final signature (worker signature)
+    big_sign_img = Image.open('sign.png')
+    size = 120,120
+    big_sign_img.thumbnail(size, Image.ANTIALIAS)
+    template_img.paste(big_sign_img, (100,970))
+
+    # convert the image to RGB adding a background
+    background = Image.new("RGB", template_img.size, (255, 255, 255))
+    background.paste(template_img, mask=template_img.split()[3]) # 3 is the alpha channel
+
+    background.save(filename + ".pdf", quality=95)
+
+    # remove the intermediate png file
+    os.system("rm " + filename + ".png")
+
+exit()
